@@ -1,4 +1,4 @@
-#include <opendxa/analysis/centrosymmetry.h>
+#include <volt/centrosymmetry_engine.h>
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -7,15 +7,15 @@
 #include <stdexcept>
 #include <mwm_csp.h>
 
-namespace OpenDXA{
+namespace Volt{
 
-using namespace OpenDXA::Particles;
+using namespace Volt::Particles;
 
-CentroSymmetryAnalysis::Engine::Engine(
+CentroSymmetryEngine::CentroSymmetryEngine(
     ParticleProperty* positions,
     const SimulationCell& cell,
     int numNeighbors,
-    CSPMode mode
+    CentroSymmetryAnalysis::CSPMode mode
 ) : _positions(positions),
     _cell(cell),
     _k(numNeighbors),
@@ -26,11 +26,11 @@ CentroSymmetryAnalysis::Engine::Engine(
 {
     if(!_positions) throw std::runtime_error("CSP Engine: positions is null");
     if(_k < 2) throw std::runtime_error("CSP Engine: numNeighbors must be >= 2");
-    if(_k > MAX_CSP_NEIGHBORS) throw std::runtime_error("CSP Engine: numNeighbors too large");
+    if(_k > CentroSymmetryAnalysis::MAX_CSP_NEIGHBORS) throw std::runtime_error("CSP Engine: numNeighbors too large");
     if((_k % 2) != 0) throw std::runtime_error("CSP Engine: numNeighbors must be even");
 }
 
-void CentroSymmetryAnalysis::Engine::perform(){
+void CentroSymmetryEngine::perform(){
     const size_t n = _positions->size();
 
     if(n == 0){
@@ -54,7 +54,7 @@ void CentroSymmetryAnalysis::Engine::perform(){
     buildHistogram();
 }
 
-void CentroSymmetryAnalysis::Engine::computeParticleCSP(size_t i){
+void CentroSymmetryEngine::computeParticleCSP(size_t i){
     std::vector<Neighbor> neigh;
     neigh.reserve((size_t) _k);
     
@@ -71,7 +71,7 @@ void CentroSymmetryAnalysis::Engine::computeParticleCSP(size_t i){
     _csp->setDouble(i, csp);
 }
 
-void CentroSymmetryAnalysis::Engine::findKNearest(size_t i, std::vector<Neighbor>& out) const{
+void CentroSymmetryEngine::findKNearest(size_t i, std::vector<Neighbor>& out) const{
     out.clear();
 
     const size_t n = _positions->size();
@@ -107,10 +107,10 @@ void CentroSymmetryAnalysis::Engine::findKNearest(size_t i, std::vector<Neighbor
     out = std::move(all);
 }
 
-double CentroSymmetryAnalysis::Engine::computeCSPFromNeighbors(const std::vector<Neighbor>& neigh) const{
+double CentroSymmetryEngine::computeCSPFromNeighbors(const std::vector<Neighbor>& neigh) const{
     const int numNN = (int) neigh.size();
 
-    if(_mode == ConventionalMode){
+    if(_mode == CentroSymmetryAnalysis::ConventionalMode){
         std::vector<double> pairs;
         pairs.reserve((size_t) numNN * (numNN - 1) / 2);
 
@@ -130,8 +130,8 @@ double CentroSymmetryAnalysis::Engine::computeCSPFromNeighbors(const std::vector
         return csp;
     }else{
         // MatchingMode (MWM CSP)
-        static_assert(MAX_CSP_NEIGHBORS <= MWM_CSP_MAX_POINTS, "CSP neighbor limit mismatch");
-        double P[MAX_CSP_NEIGHBORS][3];
+        static_assert(CentroSymmetryAnalysis::MAX_CSP_NEIGHBORS <= MWM_CSP_MAX_POINTS, "CSP neighbor limit mismatch");
+        double P[CentroSymmetryAnalysis::MAX_CSP_NEIGHBORS][3];
         for(int i = 0; i < numNN; i++){
             P[i][0] = (double)neigh[i].delta.x();
             P[i][1] = (double)neigh[i].delta.y();
@@ -142,7 +142,7 @@ double CentroSymmetryAnalysis::Engine::computeCSPFromNeighbors(const std::vector
     }
 }
 
-void CentroSymmetryAnalysis::Engine::buildHistogram(){
+void CentroSymmetryEngine::buildHistogram(){
     _histBinSize = (_maxCSP > 0.0) ? (1.01 * _maxCSP / (double)_numBins) : 0.0;
     if(_histBinSize <= 0.0) _histBinSize = 1.0;
 

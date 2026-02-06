@@ -1,11 +1,11 @@
-#include <opendxa/cli/common.h>
-#include <opendxa/wrappers/centrosymmetry.h>
+#include <volt/cli/common.h>
+#include <volt/centrosymmetry_service.h>
 
-using namespace OpenDXA;
-using namespace OpenDXA::CLI;
+using namespace Volt;
+using namespace Volt::CLI;
 
 static void showUsage(const std::string& name){
-    printUsageHeader(name, "OpenDXA - Centrosymmetry parameter (CSP)");
+    printUsageHeader(name, "Volt - Centrosymmetry parameter (CSP)");
     std::cerr
         << "  --numNeighbors <int>          Even integer, <= 32. [default: 12]\n"
         << "  --mode <conventional|matching> [default: conventional]\n"
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]){
     }
 
     auto parallel = initParallelism(opts, false);
-    initLogging("opendxa-centrosymmetry", parallel.threads);
+    initLogging("volt-centrosymmetry", parallel.threads);
 
     LammpsParser::Frame frame;
     if(!parseFrame(filename, frame)) return 1;
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    CentroSymmetryWrapper analyzer;
+    CentroSymmetryService analyzer;
     analyzer.setNumNeighbors(k);
     analyzer.setMode(mode);
 
