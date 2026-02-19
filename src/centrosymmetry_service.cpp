@@ -32,7 +32,7 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
     if((_k % 2) != 0)
         return AnalysisResult::failure("numNeighbors must be even");
 
-    auto positions = FrameAdapter::createPositionProperty(frame);
+    auto positions = FrameAdapter::createPositionPropertyShared(frame);
     if(!positions)
         return AnalysisResult::failure("Failed to create position property");
 
