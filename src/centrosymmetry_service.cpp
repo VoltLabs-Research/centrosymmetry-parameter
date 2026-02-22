@@ -1,6 +1,7 @@
 #include <volt/centrosymmetry_service.h>
 #include <volt/core/frame_adapter.h>
 #include <volt/core/analysis_result.h>
+#include <volt/utilities/json_utils.h>
 #include <spdlog/spdlog.h>
 
 namespace Volt {
@@ -56,8 +57,12 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
     result["max_csp"] = engine.maxCSP();
 
     if(!outputBase.empty()){
-        // TODO: Implement msgpack export in standalone package
-        spdlog::warn("File output not yet implemented in standalone package");
+        const std::string outputPath = outputBase + "_centrosymmetry.msgpack";
+        if(JsonUtils::writeJsonMsgpackToFile(result, outputPath, false)){
+            spdlog::info("Centrosymmetry msgpack written to {}", outputPath);
+        }else{
+            spdlog::warn("Could not write centrosymmetry msgpack: {}", outputPath);
+        }
     }
 
     return result;
