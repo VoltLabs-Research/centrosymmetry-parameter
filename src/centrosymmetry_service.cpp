@@ -48,13 +48,38 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
 
     engine.perform();
 
-    json result = AnalysisResult::success();
-    AnalysisResult::addTiming(result, start);
-    result["num_neighbors"] = _k;
-    result["mode"] = (_mode == CentroSymmetryAnalysis::ConventionalMode) ? "conventional" : "matching";
-    result["histogram_bins"] = engine.numHistogramBins();
-    result["histogram_bin_size"] = engine.histogramBinSize();
-    result["max_csp"] = engine.maxCSP();
+    auto csp = engine.cspProperty();
+    auto hist = engine.histogramCounts();
+
+    // Build histogram array
+    json histArray = json::array();
+    if(hist){
+        for(std::size_t b = 0; b < engine.numHistogramBins(); b++){
+            histArray.push_back(hist->getInt64(b));
+        }
+    }
+
+    json result;
+    result["main_listing"] = {
+        { "total_atoms", frame.natoms },
+        { "histogram_bins", engine.numHistogramBins() },
+        { "histogram_bin_size", engine.histogramBinSize() },
+        { "max_csp", engine.maxCSP() },
+        { "histogram_counts", histArray },
+        { "histogram_interval", {
+            { "start", 0.0 },
+            { "end", engine.histogramBinSize() * (double)engine.numHistogramBins() }
+        }}
+    };
+
+    json perAtom = json::array();
+    for(int i = 0; i < frame.natoms; i++){
+        perAtom.push_back({
+            { "id", frame.ids[i] },
+            { "csp", csp ? csp->getDouble(i) : 0.0 }
+        });
+    }
+    result["per-atom-properties"] = perAtom;
 
     if(!outputBase.empty()){
         const std::string outputPath = outputBase + "_centrosymmetry.msgpack";
@@ -69,3 +94,4 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
 }
 
 }
+
