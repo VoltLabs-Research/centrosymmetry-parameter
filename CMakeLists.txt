@@ -71,10 +71,7 @@ add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_precompile_headers(${PROJECT_NAME} PRIVATE <volt/core/volt.h>)
 target_link_libraries(${PROJECT_NAME} PRIVATE 
-    ${PROJECT_NAME}_lib 
-    ${CENTROSYMMETRY_BOOST_TARGET}
-    coretoolkit::coretoolkit
-    spdlog::spdlog
+    ${PROJECT_NAME}_lib
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
