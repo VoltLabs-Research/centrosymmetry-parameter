@@ -2,6 +2,12 @@
 
 `CentroSymmetryParameter` computes centrosymmetry values for each atom.
 
+## One-Command Install
+
+```bash
+curl -sSL https://raw.githubusercontent.com/VoltLabs-Research/CoreToolkit/main/scripts/install-plugin.sh | bash -s -- CentroSymmetryParameter
+```
+
 ## CLI
 
 Usage:
@@ -20,13 +26,3 @@ centrosymmetry <lammps_file> [output_base] [options]
 | `--mode <conventional\|matching>` | No | CSP evaluation mode. | `conventional` |
 | `--threads <int>` | No | Maximum worker threads. | auto |
 | `--help` | No | Print CLI help. | |
-
-## Build With CoreToolkit
-
-```bash
-cd /path/to/voltlabs-ecosystem/tools/CoreToolkit
-conan create . -nr
-
-cd /path/to/voltlabs-ecosystem/plugins/CentroSymmetryParameter
-conan create . -nr
-```
