@@ -51,25 +51,31 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
     auto csp = engine.cspProperty();
     auto hist = engine.histogramCounts();
 
-    // Build histogram array
-    json histArray = json::array();
+    json histogramRows = json::array();
     if(hist){
         for(std::size_t b = 0; b < engine.numHistogramBins(); b++){
-            histArray.push_back(hist->getInt64(b));
+            const double start = engine.histogramBinSize() * static_cast<double>(b);
+            histogramRows.push_back({
+                { "bin", static_cast<int>(b) },
+                { "start", start },
+                { "end", start + engine.histogramBinSize() },
+                { "count", hist->getInt64(b) }
+            });
         }
     }
 
+    const double histogramEnd = engine.histogramBinSize() * static_cast<double>(engine.numHistogramBins());
     json result;
     result["main_listing"] = {
         { "total_atoms", frame.natoms },
         { "histogram_bins", engine.numHistogramBins() },
         { "histogram_bin_size", engine.histogramBinSize() },
         { "max_csp", engine.maxCSP() },
-        { "histogram_counts", histArray },
-        { "histogram_interval", {
-            { "start", 0.0 },
-            { "end", engine.histogramBinSize() * (double)engine.numHistogramBins() }
-        }}
+        { "histogram_start", 0.0 },
+        { "histogram_end", histogramEnd }
+    };
+    result["sub_listings"] = {
+        { "histogram", histogramRows }
     };
 
     json perAtom = json::array();
@@ -88,10 +94,45 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
         }else{
             spdlog::warn("Could not write centrosymmetry msgpack: {}", outputPath);
         }
+
+        // --- atoms.msgpack (AtomisticExporter) ---
+        // Single-bucket export under "All": OVITO's CentroSymmetryModifier
+        // publishes a `CentroSymmetryProperty` scalar but leaves structure
+        // typing to other modifiers. We surface the CSP value per atom so
+        // the viewport can color by it.
+        json atomsArray = json::array();
+        for(int i = 0; i < frame.natoms; i++){
+            const Point3& pos = frame.positions[i];
+            atomsArray.push_back({
+                {"id", frame.ids[i]},
+                {"pos", {pos.x(), pos.y(), pos.z()}},
+                {"structure_id", 0},
+                {"structure_name", "All"},
+                {"cluster_id", 0},
+                {"csp", csp ? csp->getDouble(i) : 0.0}
+            });
+        }
+        json structuresListing = json::array();
+        structuresListing.push_back({
+            {"structure_id", 0}, {"structure_name", "All"}, {"atom_count", frame.natoms}
+        });
+        json exportWrapper;
+        exportWrapper["main_listing"] = {
+            {"total_atoms", frame.natoms},
+            {"structure_count", 1}
+        };
+        exportWrapper["sub_listings"] = { {"structures", structuresListing} };
+        exportWrapper["export"] = json::object();
+        exportWrapper["export"]["AtomisticExporter"] = {{"All", atomsArray}};
+        const std::string atomsPath = outputBase + "_atoms.msgpack";
+        if(JsonUtils::writeJsonMsgpackToFile(exportWrapper, atomsPath, false)){
+            spdlog::info("Exported atoms data to: {}", atomsPath);
+        }else{
+            spdlog::warn("Could not write atoms msgpack: {}", atomsPath);
+        }
     }
 
     return result;
 }
 
 }
-

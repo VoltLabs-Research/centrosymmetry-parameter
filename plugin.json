@@ -1,0 +1,207 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "plugin-metadata",
+        "type": "modifier",
+        "position": {
+          "x": 240,
+          "y": 160
+        },
+        "data": {
+          "modifier": {
+            "name": "Centrosymmetry Parameter",
+            "key": "centrosymmetry-parameter",
+            "icon": "HiCube",
+            "author": "Rodolfo Herrera",
+            "license": "MIT",
+            "version": "1.0.0",
+            "homepage": "https://github.com/rodyherrera/Volterra",
+            "description": "Calcula el parametro de centrosimetria por atomo (CSP) para detectar defectos y simetria local."
+          }
+        }
+      },
+      {
+        "id": "plugin-arguments",
+        "type": "arguments",
+        "position": {
+          "x": 528,
+          "y": 208
+        },
+        "data": {
+          "arguments": {
+            "arguments": [
+              {
+                "argument": "numNeighbors",
+                "type": "number",
+                "label": "Num Neighbors",
+                "default": 12,
+                "min": 2,
+                "step": 1
+              },
+              {
+                "argument": "mode",
+                "type": "select",
+                "label": "Mode",
+                "default": "conventional",
+                "options": [
+                  {
+                    "key": "conventional",
+                    "label": "Conventional"
+                  },
+                  {
+                    "key": "matching",
+                    "label": "Matching"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "trajectory-context",
+        "type": "context",
+        "position": {
+          "x": 816,
+          "y": 160
+        },
+        "data": {
+          "context": {
+            "source": "trajectory_dumps"
+          }
+        }
+      },
+      {
+        "id": "foreach-trajectory-dumps",
+        "type": "forEach",
+        "position": {
+          "x": 1088,
+          "y": 208
+        },
+        "data": {
+          "forEach": {
+            "iterableSource": "{{ trajectory-context.trajectory_dumps }}"
+          }
+        }
+      },
+      {
+        "id": "analysis-entrypoint",
+        "type": "entrypoint",
+        "position": {
+          "x": 1392,
+          "y": 208
+        },
+        "data": {
+          "entrypoint": {
+            "type": "python-script",
+            "binary": "centrosymmetry-plugin.zip",
+            "binaryObjectPath": "__UPLOAD_BINARY_OBJECT_PATH__",
+            "binaryFileName": "centrosymmetry-plugin.zip",
+            "entrypointScript": "scripts/centrosymmetry_plugin_wrapper.py",
+            "requirementsFile": "",
+            "arguments": "{{ foreach-trajectory-dumps.currentValue.path }} {{ foreach-trajectory-dumps.outputPath }} {{ plugin-arguments.as_str }}",
+            "timeout": -1
+          }
+        }
+      },
+      {
+        "id": "primary-exposure",
+        "type": "exposure",
+        "position": {
+          "x": 1712,
+          "y": 208
+        },
+        "data": {
+          "exposure": {
+            "name": "Centrosymmetry",
+            "icon": "HiCube",
+            "results": "centrosymmetry.msgpack",
+            "iterable": ""
+          }
+        }
+      },
+      {
+        "id": "centrosymmetry-model-exposure",
+        "type": "exposure",
+        "position": {
+          "x": 1712,
+          "y": 336
+        },
+        "data": {
+          "exposure": {
+            "name": "Centrosymmetry Model",
+            "icon": "HiCube",
+            "results": "atoms.msgpack",
+            "iterable": ""
+          }
+        }
+      },
+      {
+        "id": "centrosymmetry-model-export",
+        "type": "export",
+        "position": {
+          "x": 2032,
+          "y": 336
+        },
+        "data": {
+          "export": {
+            "exporter": "AtomisticExporter",
+            "type": "glb"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-metadata-arguments",
+        "source": "plugin-metadata",
+        "sourceHandle": "output",
+        "target": "plugin-arguments",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-arguments-context",
+        "source": "plugin-arguments",
+        "sourceHandle": "output",
+        "target": "trajectory-context",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-context-foreach",
+        "source": "trajectory-context",
+        "sourceHandle": "output",
+        "target": "foreach-trajectory-dumps",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-foreach-entrypoint",
+        "source": "foreach-trajectory-dumps",
+        "sourceHandle": "output",
+        "target": "analysis-entrypoint",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-entrypoint-exposure",
+        "source": "analysis-entrypoint",
+        "sourceHandle": "output",
+        "target": "primary-exposure",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-entrypoint-centrosymmetry-model-exposure",
+        "source": "analysis-entrypoint",
+        "sourceHandle": "output",
+        "target": "centrosymmetry-model-exposure",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-centrosymmetry-model-exposure-centrosymmetry-model-export",
+        "source": "centrosymmetry-model-exposure",
+        "sourceHandle": "output",
+        "target": "centrosymmetry-model-export",
+        "targetHandle": "input"
+      }
+    ]
+  }
+}
