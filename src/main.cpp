@@ -8,7 +8,7 @@ using namespace Volt::CLI;
 static void showUsage(const std::string& name){
     printUsageHeader(name, "Volt - Centrosymmetry parameter (CSP)");
     std::cerr
-        << "  --numNeighbors <int>          Even integer, <= 32. [default: 12]\n"
+        << "  --num_neighbors <int>          Even integer, <= 32. [default: 12]\n"
         << "  --mode <conventional|matching> [default: conventional]\n"
         << "  --threads <int>               Max worker threads. [default: auto]\n";
     printHelpOption();
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]){
     outputBase = deriveOutputBase(filename, outputBase);
     spdlog::info("Output base: {}", outputBase);
 
-    int k = getInt(opts, "--numNeighbors", 12);
+    int k = getInt(opts, "--num_neighbors", 12);
 
     std::string modeStr = getString(opts, "--mode", "conventional");
     CentroSymmetryAnalysis::CSPMode mode = CentroSymmetryAnalysis::ConventionalMode;
