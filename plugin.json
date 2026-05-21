@@ -32,7 +32,7 @@
           "arguments": {
             "arguments": [
               {
-                "argument": "numNeighbors",
+                "argument": "num_neighbors",
                 "type": "number",
                 "label": "Num Neighbors",
                 "default": 12,
