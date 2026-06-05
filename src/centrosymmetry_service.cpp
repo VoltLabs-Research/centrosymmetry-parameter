@@ -2,6 +2,7 @@
 #include <volt/core/frame_adapter.h>
 #include <volt/core/analysis_result.h>
 #include <volt/utilities/json_utils.h>
+#include <volt/utilities/msgpack_atom_writer.h>
 #include <spdlog/spdlog.h>
 
 namespace Volt {
@@ -21,8 +22,6 @@ void CentroSymmetryService::setMode(CentroSymmetryAnalysis::CSPMode mode){
 }
 
 json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std::string& outputBase){
-    auto start = std::chrono::high_resolution_clock::now();
-
     if(frame.natoms <= 0)
         return AnalysisResult::failure("Invalid number of atoms");
 
@@ -78,15 +77,6 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
         { "histogram", histogramRows }
     };
 
-    json perAtom = json::array();
-    for(int i = 0; i < frame.natoms; i++){
-        perAtom.push_back({
-            { "id", frame.ids[i] },
-            { "csp", csp ? csp->getDouble(i) : 0.0 }
-        });
-    }
-    result["per-atom-properties"] = perAtom;
-
     if(!outputBase.empty()){
         const std::string outputPath = outputBase + "_centrosymmetry.msgpack";
         if(JsonUtils::writeJsonMsgpackToFile(result, outputPath, false)){
@@ -95,41 +85,18 @@ json CentroSymmetryService::compute(const LammpsParser::Frame& frame, const std:
             spdlog::warn("Could not write centrosymmetry msgpack: {}", outputPath);
         }
 
-        // --- atoms.msgpack (AtomisticExporter) ---
-        // Single-bucket export under "All": OVITO's CentroSymmetryModifier
-        // publishes a `CentroSymmetryProperty` scalar but leaves structure
-        // typing to other modifiers. We surface the CSP value per atom so
-        // the viewport can color by it.
-        json atomsArray = json::array();
-        for(int i = 0; i < frame.natoms; i++){
-            const Point3& pos = frame.positions[i];
-            atomsArray.push_back({
-                {"id", frame.ids[i]},
-                {"pos", {pos.x(), pos.y(), pos.z()}},
-                {"structure_id", 0},
-                {"structure_name", "All"},
-                {"cluster_id", 0},
-                {"csp", csp ? csp->getDouble(i) : 0.0}
-            });
-        }
-        json structuresListing = json::array();
-        structuresListing.push_back({
-            {"structure_id", 0}, {"structure_name", "All"}, {"atom_count", frame.natoms}
-        });
-        json exportWrapper;
-        exportWrapper["main_listing"] = {
-            {"total_atoms", frame.natoms},
-            {"structure_count", 1}
+        // _atoms.msgpack: streaming, no DOM
+        auto fieldWriter = [&](MsgpackWriter& w, std::size_t i, int& count){
+            count = 1;
+            w.write_key("csp"); w.write_double(csp ? csp->getDouble(i) : 0.0);
         };
-        exportWrapper["sub_listings"] = { {"structures", structuresListing} };
-        exportWrapper["export"] = json::object();
-        exportWrapper["export"]["AtomisticExporter"] = {{"All", atomsArray}};
+
         const std::string atomsPath = outputBase + "_atoms.msgpack";
-        if(JsonUtils::writeJsonMsgpackToFile(exportWrapper, atomsPath, false)){
-            spdlog::info("Exported atoms data to: {}", atomsPath);
-        }else{
-            spdlog::warn("Could not write atoms msgpack: {}", atomsPath);
-        }
+        streamAtomsToFile(atomsPath, frame,
+            [](std::size_t){ return std::string("All"); },
+            fieldWriter
+        );
+        spdlog::info("Exported atoms data to: {}", atomsPath);
     }
 
     return result;
