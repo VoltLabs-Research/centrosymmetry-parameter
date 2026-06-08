@@ -15,7 +15,7 @@
             "icon": "HiCube",
             "author": "Rodolfo Herrera",
             "license": "MIT",
-            "version": "1.0.2",
+            "version": "1.0.3",
             "homepage": "https://github.com/rodyherrera/Volterra",
             "description": "Calcula el parametro de centrosimetria por atomo (CSP) para detectar defectos y simetria local."
           }
@@ -94,12 +94,10 @@
         },
         "data": {
           "entrypoint": {
-            "type": "python-script",
-            "binary": "centrosymmetry-plugin.zip",
+            "type": "executable",
+            "binary": "centrosymmetry",
             "binaryObjectPath": "__UPLOAD_BINARY_OBJECT_PATH__",
-            "binaryFileName": "centrosymmetry-plugin.zip",
-            "entrypointScript": "scripts/centrosymmetry_plugin_wrapper.py",
-            "requirementsFile": "",
+            "binaryFileName": "centrosymmetry",
             "arguments": "{{ foreach-trajectory-dumps.currentValue.path }} {{ foreach-trajectory-dumps.outputPath }} {{ plugin-arguments.as_str }}",
             "timeout": -1
           }
