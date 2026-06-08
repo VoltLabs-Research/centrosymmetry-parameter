@@ -77,6 +77,9 @@ private:
     size_t _numBins;
     double _histBinSize;
     double _maxCSP;
+
+    // Non-owning; points to a finder prepared on the stack in perform().
+    const NearestNeighborFinder* _finder = nullptr;
 };
 
 }
