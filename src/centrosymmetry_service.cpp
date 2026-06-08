@@ -64,6 +64,11 @@ json CentrosymmetryService::compute(const LammpsParser::Frame& frame, const std:
                 count = 1;
                 w.write_key("csp");
                 w.write_double(csp ? csp->getDouble(i) : 0.0);
+            },
+            .perAtomFieldWriter = [&csp](MsgpackWriter& w, std::size_t i, int& count) {
+                count = 1;
+                w.write_key("csp");
+                w.write_double(csp ? csp->getDouble(i) : 0.0);
             }
         });
     }
