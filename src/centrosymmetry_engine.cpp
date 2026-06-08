@@ -1,5 +1,10 @@
 #include <volt/centrosymmetry_engine.h>
+#include <volt/analysis/nearest_neighbor_finder.h>
 #include <spdlog/spdlog.h>
+
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/blocked_range.h>
 
 #include <algorithm>
 #include <numeric>
@@ -44,13 +49,33 @@ void CentroSymmetryEngine::perform(){
     // Output CSP per particle
     _csp = std::make_shared<ParticleProperty>(n, DataType::Double, 1, 0, true);
 
-    // Compute CSP per particle
-    _maxCSP = 0.0;
-    for(size_t i = 0; i < n; i++){
-        computeParticleCSP(i);
-        _maxCSP = std::max(_maxCSP, _csp->getDouble(i));
+    // Build a kd-tree over the atoms once (numNeighbors == _k so each query
+    // returns the _k nearest). Replaces the previous O(N^2) brute-force search.
+    NearestNeighborFinder finder(_k);
+    if(!finder.prepare(_positions, _cell)){
+        for(size_t i = 0; i < n; i++) _csp->setDouble(i, 0.0);
+        _maxCSP = 0.0;
+        buildHistogram();
+        return;
     }
+    _finder = &finder;
 
+    // Per-particle CSP in parallel. Each atom writes _csp[i] at a distinct
+    // index and findKNearest builds its own thread-local kd-tree query, so
+    // there is no shared mutable state and no data race.
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
+        [this](const tbb::blocked_range<size_t>& r){
+            for(size_t i = r.begin(); i < r.end(); ++i) computeParticleCSP(i);
+        });
+
+    _maxCSP = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, n), 0.0,
+        [this](const tbb::blocked_range<size_t>& r, double m){
+            for(size_t i = r.begin(); i < r.end(); ++i) m = std::max(m, _csp->getDouble(i));
+            return m;
+        },
+        [](double a, double b){ return std::max(a, b); });
+
+    _finder = nullptr;
     buildHistogram();
 }
 
@@ -74,37 +99,18 @@ void CentroSymmetryEngine::computeParticleCSP(size_t i){
 void CentroSymmetryEngine::findKNearest(size_t i, std::vector<Neighbor>& out) const{
     out.clear();
 
-    const size_t n = _positions->size();
-    const Point3* pos = _positions->constDataPoint3();
-    const Point3 pi = pos[i];
+    // kd-tree query: O(log N) per atom instead of O(N). The finder keeps the
+    // _k nearest (constructed with numNeighbors == _k) and results() are sorted
+    // ascending by distance. delta = neighbor - center, the same convention as
+    // the previous minimum-image computation.
+    NearestNeighborFinder::Query<CentroSymmetryAnalysis::MAX_CSP_NEIGHBORS> q(*_finder);
+    q.findNeighbors(i);
 
-    std::vector<Neighbor> all;
-    all.reserve(n > 0 ? n - 1 : 0);
-    for(size_t j = 0; j < n; j++){
-        if(j == i) continue;
-
-        Vector3 delta = _cell.wrapVector(pos[j] - pi);
-        double d2 = (double) delta.squaredLength();
-
-        if(d2 <= 0.0) continue;
-
-        all.push_back(Neighbor{ d2, delta });
+    const auto& res = q.results();
+    out.reserve((size_t) res.size());
+    for(int j = 0; j < res.size(); ++j){
+        out.push_back(Neighbor{ res[j].distanceSq, res[j].delta });
     }
-
-    if(all.empty()) return;
-
-    const size_t k = std::min<size_t>((size_t) _k, all.size());
-    std::nth_element(all.begin(), all.begin() + (k - 1), all.end(), [](const Neighbor& a, const Neighbor& b){
-        return a.dist2 < b.dist2;
-    });
-
-    all.resize(k);
-
-    std::sort(all.begin(), all.end(), [](const Neighbor& a, const Neighbor& b){
-        return a.dist2 < b.dist2;
-    });
-
-    out = std::move(all);
 }
 
 double CentroSymmetryEngine::computeCSPFromNeighbors(const std::vector<Neighbor>& neigh) const{
