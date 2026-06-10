@@ -60,15 +60,8 @@ json CentrosymmetryService::compute(const LammpsParser::Frame& frame, const std:
         Plugin::serializePluginOutput(outputBase, frame, result, {
             .summaryFileSuffix = "_centrosymmetry",
             .bucketResolver = [](std::size_t) { return std::string("All"); },
-            .atomFieldWriter = [&csp](MsgpackWriter& w, std::size_t i, int& count) {
-                count = 1;
-                w.write_key("csp");
-                w.write_double(csp ? csp->getDouble(i) : 0.0);
-            },
-            .perAtomFieldWriter = [&csp](MsgpackWriter& w, std::size_t i, int& count) {
-                count = 1;
-                w.write_key("csp");
-                w.write_double(csp ? csp->getDouble(i) : 0.0);
+            .perAtomColumnWriter = [&csp](ColumnarAtomWriter& w, std::size_t i) {
+                w.field("csp", csp ? csp->getDouble(i) : 0.0);
             }
         });
     }
