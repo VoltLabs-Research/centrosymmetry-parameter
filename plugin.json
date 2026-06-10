@@ -114,7 +114,7 @@
           "exposure": {
             "name": "Centrosymmetry",
             "icon": "HiCube",
-            "results": "centrosymmetry.msgpack",
+            "results": "centrosymmetry.parquet",
             "iterable": ""
           }
         }
@@ -130,7 +130,7 @@
           "exposure": {
             "name": "Centrosymmetry Model",
             "icon": "HiCube",
-            "results": "atoms.msgpack",
+            "results": "atoms.parquet",
             "iterable": ""
           }
         }
