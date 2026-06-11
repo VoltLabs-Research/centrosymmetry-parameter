@@ -131,7 +131,14 @@
             "name": "Centrosymmetry Model",
             "icon": "HiCube",
             "results": "atoms.parquet",
-            "iterable": ""
+            "iterable": "",
+            "properties": [
+              {
+                "key": "csp",
+                "label": "Centrosymmetry (CSP)",
+                "type": "double"
+              }
+            ]
           }
         }
       },
