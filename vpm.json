@@ -1,6 +1,6 @@
 {
   "name": "@voltlabs/centrosymmetry-parameter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "kind": "workflow",
   "publisher": "voltlabs",
   "description": "Computes the per-atom Centrosymmetry Parameter (CSP) for defect detection and local symmetry analysis.",
