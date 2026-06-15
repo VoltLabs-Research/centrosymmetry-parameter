@@ -137,6 +137,11 @@
                 "key": "csp",
                 "label": "Centrosymmetry (CSP)",
                 "type": "double"
+              },
+              {
+                "key": "coordination",
+                "label": "Coordination number",
+                "type": "int"
               }
             ]
           }
