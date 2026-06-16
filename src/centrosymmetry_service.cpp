@@ -63,6 +63,8 @@ json CentrosymmetryService::compute(const LammpsParser::Frame& frame, const std:
             .perAtomColumnWriter = [&csp](ColumnarAtomWriter& w, std::size_t i) {
                 w.field("csp", csp ? csp->getDouble(i) : 0.0);
             }
+            // CSP is not structural identification: structure_id/structure_name stay
+            // off (the OutputConfig default) so they don't leak into the catalog.
         });
     }
 
