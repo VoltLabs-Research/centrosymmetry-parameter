@@ -5,6 +5,7 @@ Computes the per-atom centrosymmetry parameter (CSP) to detect defects and local
 ## Install
 
 ```bash
+npm install -g @voltstack/vpm
 vpm install @voltlabs/centrosymmetry-parameter
 ```
 
