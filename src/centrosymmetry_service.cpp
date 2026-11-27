@@ -36,7 +36,7 @@ json CentrosymmetryService::compute(const LammpsParser::Frame& frame, const std:
         for (std::size_t b = 0; b < engine.numHistogramBins(); ++b) {
             const double start = engine.histogramBinSize() * static_cast<double>(b);
             histogramRows.push_back({
-                {"bin", static_cast<int>(b)},
+                {"bin", b},
                 {"start", start},
                 {"end", start + engine.histogramBinSize()},
                 {"count", hist->getInt64(b)}
@@ -60,7 +60,7 @@ json CentrosymmetryService::compute(const LammpsParser::Frame& frame, const std:
         Plugin::serializePluginOutput(outputBase, frame, result, {
             .summaryFileSuffix = "_centrosymmetry",
             .bucketResolver = [](std::size_t) { return std::string("All"); },
-            .perAtomColumnWriter = [&csp](ColumnarAtomWriter& w, std::size_t i) {
+            .perAtomColumnWriter = [&csp](ColumnarRowWriter& w, std::size_t i) {
                 w.field("csp", csp ? csp->getDouble(i) : 0.0);
             }
             // CSP is not structural identification: structure_id/structure_name stay
